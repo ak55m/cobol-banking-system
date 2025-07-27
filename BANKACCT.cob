@@ -37,18 +37,21 @@
                DISPLAY " "
                DISPLAY "📋 MAIN MENU:"
                DISPLAY "  1. Create New Account"
-               DISPLAY "  2. Exit System"
+               DISPLAY "  2. View All Accounts"
+               DISPLAY "  3. Exit System"
                DISPLAY " "
-               DISPLAY "Enter your choice (1-2): " WITH NO ADVANCING
+               DISPLAY "Enter your choice (1-3): " WITH NO ADVANCING
                ACCEPT CHOICE
                EVALUATE CHOICE
                    WHEN 1
                        PERFORM CREATE-ACCOUNT
                    WHEN 2
+                       PERFORM VIEW-ACCOUNTS
+                   WHEN 3
                        DISPLAY "👋 Thank you for using COBOL Banking System!"
                        MOVE 'Y' TO WS-DONE
                    WHEN OTHER
-                       DISPLAY "❌ Invalid option. Please enter 1 or 2."
+                       DISPLAY "❌ Invalid option. Please enter 1, 2, or 3."
                END-EVALUATE
            END-PERFORM
            STOP RUN.
@@ -79,6 +82,34 @@
            DISPLAY "   Name: " WS-NAME
            DISPLAY "   Balance: $" WS-BALANCE
            DISPLAY "   Type: " WS-TYPE.
+
+       VIEW-ACCOUNTS.
+           DISPLAY " "
+           DISPLAY "👥 ALL CUSTOMER ACCOUNTS"
+           DISPLAY "========================"
+           
+           OPEN INPUT CUSTOMER-FILE
+           
+           IF FILE-STATUS NOT = "00"
+               DISPLAY "❌ Error opening customer file: " FILE-STATUS
+               DISPLAY "   No accounts found or file cannot be read."
+           ELSE
+               DISPLAY "Account ID | Customer Name              | Balance    | Type"
+               DISPLAY "-----------|----------------------------|------------|-----"
+               
+               PERFORM UNTIL FILE-STATUS = "10"
+                   READ CUSTOMER-FILE
+                   IF FILE-STATUS = "00"
+                       DISPLAY ACCT-ID " | " NAME " | $" BALANCE " | " ACCT-TYPE
+                   END-IF
+               END-PERFORM
+               
+               IF FILE-STATUS NOT = "10" AND FILE-STATUS NOT = "00"
+                   DISPLAY "❌ Error reading customer file: " FILE-STATUS
+               END-IF
+           END-IF
+           
+           CLOSE CUSTOMER-FILE.
 
        WRITE-CUSTOMER-RECORD.
            OPEN EXTEND CUSTOMER-FILE
