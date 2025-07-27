@@ -2,7 +2,18 @@
 
 ## Overview
 
-This is a simple banking system implemented in COBOL using the GnuCOBOL compiler. The application provides basic banking functionality including account creation with persistent data storage through file-based operations. The system is designed to run in a console environment and uses traditional COBOL file handling for data persistence.
+This is a complete banking system implemented in COBOL using a Python-based GnuCOBOL simulator. The application provides comprehensive banking functionality including account creation, viewing accounts, depositing money, and withdrawing money with proper balance validation. All data is persistently stored through file-based operations. The system is designed to run in a console environment and uses traditional COBOL file handling patterns for data persistence.
+
+## Recent Changes
+
+**July 27, 2025 - Added Deposit & Withdraw Features:**
+- Enhanced COBOL program with deposit money functionality
+- Enhanced COBOL program with withdraw money functionality  
+- Added balance validation to prevent overdrafts
+- Added proper error handling for account not found scenarios
+- Updated menu system to include options 3 (Deposit) and 4 (Withdraw)
+- Updated Python simulator to handle financial transactions
+- Successfully tested all transaction scenarios including insufficient funds validation
 
 ## User Preferences
 

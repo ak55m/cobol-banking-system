@@ -12,19 +12,25 @@ def main():
         print("📋 MAIN MENU:")
         print("  1. Create New Account")
         print("  2. View All Accounts")
-        print("  3. Exit System")
+        print("  3. Deposit Money")
+        print("  4. Withdraw Money")
+        print("  5. Exit System")
         print(" ")
-        choice = input("Enter your choice (1-3): ")
+        choice = input("Enter your choice (1-5): ")
         
         if choice == "1":
             create_account()
         elif choice == "2":
             view_accounts()
         elif choice == "3":
+            deposit_money()
+        elif choice == "4":
+            withdraw_money()
+        elif choice == "5":
             print("👋 Thank you for using COBOL Banking System!")
             break
         else:
-            print("❌ Invalid option. Please enter 1, 2, or 3.")
+            print("❌ Invalid option. Please enter 1-5.")
 
 def create_account():
     print(" ")
@@ -74,6 +80,132 @@ def view_accounts():
     except FileNotFoundError:
         print("📭 No accounts found.")
         print("   Create your first account using option 1!")
+
+def deposit_money():
+    print(" ")
+    print("💰 DEPOSIT MONEY")
+    print("=" * 16)
+    
+    search_id = input("Enter Account ID: ")
+    amount = input("Enter deposit amount: $")
+    
+    try:
+        amount = float(amount)
+        if amount <= 0:
+            print("❌ Invalid amount. Please enter a positive number.")
+            return
+    except ValueError:
+        print("❌ Invalid amount. Please enter a valid number.")
+        return
+    
+    # Read and update accounts
+    try:
+        with open("CUSTOMERS.DAT", "r") as f:
+            lines = f.readlines()
+        
+        found = False
+        updated_lines = []
+        
+        for line in lines:
+            if line.strip():
+                acct_id = line[0:10].strip()
+                name = line[10:40].strip()
+                balance = float(line[40:49].strip())
+                acct_type = line[49:50].strip()
+                
+                if acct_id == search_id:
+                    new_balance = balance + amount
+                    updated_line = f"{acct_id:<10}{name:<30}{new_balance:>9.0f}{acct_type}\n"
+                    updated_lines.append(updated_line)
+                    found = True
+                    
+                    print(" ")
+                    print("✅ Deposit successful!")
+                    print(f"   Account ID: {search_id}")
+                    print(f"   Amount deposited: ${amount:.2f}")
+                    print(f"   New balance: ${new_balance:.2f}")
+                else:
+                    updated_lines.append(line)
+            else:
+                updated_lines.append(line)
+        
+        if found:
+            with open("CUSTOMERS.DAT", "w") as f:
+                f.writelines(updated_lines)
+        else:
+            print(" ")
+            print(f"❌ Account not found: {search_id}")
+            
+    except FileNotFoundError:
+        print(" ")
+        print(f"❌ Account not found: {search_id}")
+
+def withdraw_money():
+    print(" ")
+    print("💸 WITHDRAW MONEY")
+    print("=" * 17)
+    
+    search_id = input("Enter Account ID: ")
+    amount = input("Enter withdrawal amount: $")
+    
+    try:
+        amount = float(amount)
+        if amount <= 0:
+            print("❌ Invalid amount. Please enter a positive number.")
+            return
+    except ValueError:
+        print("❌ Invalid amount. Please enter a valid number.")
+        return
+    
+    # Read and update accounts
+    try:
+        with open("CUSTOMERS.DAT", "r") as f:
+            lines = f.readlines()
+        
+        found = False
+        updated_lines = []
+        
+        for line in lines:
+            if line.strip():
+                acct_id = line[0:10].strip()
+                name = line[10:40].strip()
+                balance = float(line[40:49].strip())
+                acct_type = line[49:50].strip()
+                
+                if acct_id == search_id:
+                    if balance >= amount:
+                        new_balance = balance - amount
+                        updated_line = f"{acct_id:<10}{name:<30}{new_balance:>9.0f}{acct_type}\n"
+                        updated_lines.append(updated_line)
+                        found = True
+                        
+                        print(" ")
+                        print("✅ Withdrawal successful!")
+                        print(f"   Account ID: {search_id}")
+                        print(f"   Amount withdrawn: ${amount:.2f}")
+                        print(f"   New balance: ${new_balance:.2f}")
+                    else:
+                        print(" ")
+                        print("❌ Insufficient funds!")
+                        print(f"   Current balance: ${balance:.2f}")
+                        print(f"   Requested amount: ${amount:.2f}")
+                        updated_lines.append(line)
+                        found = True
+                else:
+                    updated_lines.append(line)
+            else:
+                updated_lines.append(line)
+        
+        if found and balance >= amount:
+            with open("CUSTOMERS.DAT", "w") as f:
+                f.writelines(updated_lines)
+        elif not found:
+            print(" ")
+            print(f"❌ Account not found: {search_id}")
+            
+    except FileNotFoundError:
+        print(" ")
+        print(f"❌ Account not found: {search_id}")
 
 if __name__ == "__main__":
     main()

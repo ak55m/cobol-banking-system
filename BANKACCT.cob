@@ -27,6 +27,11 @@
        01 WS-NAME          PIC X(30).
        01 WS-BALANCE       PIC 9(7)V99.
        01 WS-TYPE          PIC X(1).
+       
+       01 WS-SEARCH-ID     PIC X(10).
+       01 WS-AMOUNT        PIC 9(7)V99.
+       01 WS-FOUND         PIC X VALUE 'N'.
+       01 WS-NEW-BALANCE   PIC 9(7)V99.
 
        PROCEDURE DIVISION.
        MAIN-PARA.
@@ -38,9 +43,11 @@
                DISPLAY "📋 MAIN MENU:"
                DISPLAY "  1. Create New Account"
                DISPLAY "  2. View All Accounts"
-               DISPLAY "  3. Exit System"
+               DISPLAY "  3. Deposit Money"
+               DISPLAY "  4. Withdraw Money"
+               DISPLAY "  5. Exit System"
                DISPLAY " "
-               DISPLAY "Enter your choice (1-3): " WITH NO ADVANCING
+               DISPLAY "Enter your choice (1-5): " WITH NO ADVANCING
                ACCEPT CHOICE
                EVALUATE CHOICE
                    WHEN 1
@@ -48,10 +55,14 @@
                    WHEN 2
                        PERFORM VIEW-ACCOUNTS
                    WHEN 3
+                       PERFORM DEPOSIT-MONEY
+                   WHEN 4
+                       PERFORM WITHDRAW-MONEY
+                   WHEN 5
                        DISPLAY "👋 Thank you for using COBOL Banking System!"
                        MOVE 'Y' TO WS-DONE
                    WHEN OTHER
-                       DISPLAY "❌ Invalid option. Please enter 1, 2, or 3."
+                       DISPLAY "❌ Invalid option. Please enter 1-5."
                END-EVALUATE
            END-PERFORM
            STOP RUN.
@@ -107,6 +118,108 @@
                IF FILE-STATUS NOT = "10" AND FILE-STATUS NOT = "00"
                    DISPLAY "❌ Error reading customer file: " FILE-STATUS
                END-IF
+           END-IF
+           
+           CLOSE CUSTOMER-FILE.
+
+       DEPOSIT-MONEY.
+           DISPLAY " "
+           DISPLAY "💰 DEPOSIT MONEY"
+           DISPLAY "================"
+           
+           DISPLAY "Enter Account ID: " WITH NO ADVANCING
+           ACCEPT WS-SEARCH-ID
+           
+           DISPLAY "Enter deposit amount: $" WITH NO ADVANCING
+           ACCEPT WS-AMOUNT
+           
+           PERFORM UPDATE-BALANCE-ADD
+           
+           IF WS-FOUND = 'Y'
+               DISPLAY " "
+               DISPLAY "✅ Deposit successful!"
+               DISPLAY "   Account ID: " WS-SEARCH-ID
+               DISPLAY "   Amount deposited: $" WS-AMOUNT
+               DISPLAY "   New balance: $" WS-NEW-BALANCE
+           ELSE
+               DISPLAY " "
+               DISPLAY "❌ Account not found: " WS-SEARCH-ID
+           END-IF.
+
+       WITHDRAW-MONEY.
+           DISPLAY " "
+           DISPLAY "💸 WITHDRAW MONEY"
+           DISPLAY "================="
+           
+           DISPLAY "Enter Account ID: " WITH NO ADVANCING
+           ACCEPT WS-SEARCH-ID
+           
+           DISPLAY "Enter withdrawal amount: $" WITH NO ADVANCING
+           ACCEPT WS-AMOUNT
+           
+           PERFORM UPDATE-BALANCE-SUBTRACT
+           
+           IF WS-FOUND = 'Y'
+               DISPLAY " "
+               DISPLAY "✅ Withdrawal successful!"
+               DISPLAY "   Account ID: " WS-SEARCH-ID
+               DISPLAY "   Amount withdrawn: $" WS-AMOUNT
+               DISPLAY "   New balance: $" WS-NEW-BALANCE
+           ELSE
+               DISPLAY " "
+               DISPLAY "❌ Account not found: " WS-SEARCH-ID
+           END-IF.
+
+       UPDATE-BALANCE-ADD.
+           MOVE 'N' TO WS-FOUND
+           OPEN I-O CUSTOMER-FILE
+           
+           IF FILE-STATUS NOT = "00"
+               DISPLAY "❌ Error opening customer file: " FILE-STATUS
+           ELSE
+               PERFORM UNTIL FILE-STATUS = "10"
+                   READ CUSTOMER-FILE
+                   IF FILE-STATUS = "00"
+                       IF ACCT-ID = WS-SEARCH-ID
+                           ADD WS-AMOUNT TO BALANCE
+                           MOVE BALANCE TO WS-NEW-BALANCE
+                           REWRITE CUSTOMER-RECORD
+                           MOVE 'Y' TO WS-FOUND
+                           MOVE "10" TO FILE-STATUS
+                       END-IF
+                   END-IF
+               END-PERFORM
+           END-IF
+           
+           CLOSE CUSTOMER-FILE.
+
+       UPDATE-BALANCE-SUBTRACT.
+           MOVE 'N' TO WS-FOUND
+           OPEN I-O CUSTOMER-FILE
+           
+           IF FILE-STATUS NOT = "00"
+               DISPLAY "❌ Error opening customer file: " FILE-STATUS
+           ELSE
+               PERFORM UNTIL FILE-STATUS = "10"
+                   READ CUSTOMER-FILE
+                   IF FILE-STATUS = "00"
+                       IF ACCT-ID = WS-SEARCH-ID
+                           IF BALANCE >= WS-AMOUNT
+                               SUBTRACT WS-AMOUNT FROM BALANCE
+                               MOVE BALANCE TO WS-NEW-BALANCE
+                               REWRITE CUSTOMER-RECORD
+                               MOVE 'Y' TO WS-FOUND
+                           ELSE
+                               DISPLAY " "
+                               DISPLAY "❌ Insufficient funds!"
+                               DISPLAY "   Current balance: $" BALANCE
+                               DISPLAY "   Requested amount: $" WS-AMOUNT
+                               MOVE 'N' TO WS-FOUND
+                           END-IF
+                           MOVE "10" TO FILE-STATUS
+                       END-IF
+                   END-IF
+               END-PERFORM
            END-IF
            
            CLOSE CUSTOMER-FILE.
