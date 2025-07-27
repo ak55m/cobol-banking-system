@@ -28,9 +28,11 @@ def main():
         print("  2. View All Accounts")
         print("  3. Deposit Money")
         print("  4. Withdraw Money")
-        print("  5. Exit System")
+        print("  5. Mini Statement")
+        print("  6. Apply Interest (Savings)")
+        print("  7. Exit System")
         print(" ")
-        choice = input("Enter your choice (1-5): ")
+        choice = input("Enter your choice (1-7): ")
         
         if choice == "1":
             create_account()
@@ -41,10 +43,14 @@ def main():
         elif choice == "4":
             withdraw_money()
         elif choice == "5":
+            mini_statement()
+        elif choice == "6":
+            apply_interest()
+        elif choice == "7":
             print("👋 Thank you for using COBOL Banking System!")
             break
         else:
-            print("❌ Invalid option. Please enter 1-5.")
+            print("❌ Invalid option. Please enter 1-7.")
 
 def create_account():
     print(" ")
@@ -138,6 +144,7 @@ def deposit_money():
                     print(f"   Account ID: {{search_id}}")
                     print(f"   Amount deposited: ${{amount:.2f}}")
                     print(f"   New balance: ${{new_balance:.2f}}")
+                    log_transaction(search_id, "D", amount)
                 else:
                     updated_lines.append(line)
             else:
@@ -198,6 +205,7 @@ def withdraw_money():
                         print(f"   Account ID: {{search_id}}")
                         print(f"   Amount withdrawn: ${{amount:.2f}}")
                         print(f"   New balance: ${{new_balance:.2f}}")
+                        log_transaction(search_id, "W", amount)
                     else:
                         print(" ")
                         print("❌ Insufficient funds!")
@@ -220,6 +228,105 @@ def withdraw_money():
     except FileNotFoundError:
         print(" ")
         print(f"❌ Account not found: {{search_id}}")
+
+def log_transaction(acct_id, trans_type, amount):
+    """Log transaction to TRANSACTIONS.DAT"""
+    import datetime
+    now = datetime.datetime.now()
+    date_str = now.strftime("%Y/%m/%d")
+    time_str = now.strftime("%H:%M:%S")
+    
+    with open("TRANSACTIONS.DAT", "a") as f:
+        f.write(f"{{acct_id:<10}}{{trans_type:<1}}{{amount:>9.0f}}{{date_str:<10}}{{time_str:<8}}\\n")
+
+def mini_statement():
+    print(" ")
+    print("📊 MINI STATEMENT")
+    print("=" * 16)
+    
+    search_id = input("Enter Account ID: ")
+    
+    print(" ")
+    print(f"Last 5 transactions for Account: {{search_id}}")
+    print("Date       | Time     | Type | Amount     ")
+    print("-----------|----------|------|------------")
+    
+    try:
+        with open("TRANSACTIONS.DAT", "r") as f:
+            lines = f.readlines()
+        
+        # Filter transactions for this account and get last 5
+        account_transactions = []
+        for line in lines:
+            if line.strip():
+                acct_id = line[0:10].strip()
+                if acct_id == search_id:
+                    trans_type = line[10:11].strip()
+                    amount = line[11:20].strip()
+                    date = line[20:30].strip()
+                    time = line[30:38].strip()
+                    
+                    type_display = "DEP" if trans_type == "D" else "WTH" if trans_type == "W" else "INT"
+                    account_transactions.append(f"{{date}} | {{time}} | {{type_display}}  | ${{amount}}")
+        
+        if account_transactions:
+            # Show last 5 transactions
+            for trans in account_transactions[-5:]:
+                print(trans)
+        else:
+            print("No transactions found for this account.")
+            
+    except FileNotFoundError:
+        print("❌ No transaction history found.")
+
+def apply_interest():
+    print(" ")
+    print("💰 APPLY INTEREST TO SAVINGS ACCOUNTS")
+    print("=" * 36)
+    print("Applying 2% annual interest to all savings accounts...")
+    
+    try:
+        with open("CUSTOMERS.DAT", "r") as f:
+            lines = f.readlines()
+        
+        updated_lines = []
+        interest_count = 0
+        
+        for line in lines:
+            if line.strip():
+                acct_id = line[0:10].strip()
+                name = line[10:40].strip()
+                balance = float(line[40:49].strip())
+                acct_type = line[49:50].strip()
+                
+                if acct_type == 'S':  # Savings account
+                    interest_amount = balance * 0.02
+                    new_balance = balance + interest_amount
+                    updated_line = f"{{acct_id:<10}}{{name:<30}}{{new_balance:>9.0f}}{{acct_type}}\\n"
+                    updated_lines.append(updated_line)
+                    
+                    # Log interest transaction
+                    log_transaction(acct_id, "I", interest_amount)
+                    
+                    print(f"Interest applied to {{acct_id}}: ${{interest_amount:.2f}}")
+                    interest_count += 1
+                else:
+                    updated_lines.append(line)
+            else:
+                updated_lines.append(line)
+        
+        if interest_count > 0:
+            with open("CUSTOMERS.DAT", "w") as f:
+                f.writelines(updated_lines)
+            
+            print(" ")
+            print(f"✅ Interest applied to {{interest_count}} savings accounts.")
+        else:
+            print(" ")
+            print("No savings accounts found.")
+            
+    except FileNotFoundError:
+        print("❌ No customer accounts found.")
 
 if __name__ == "__main__":
     main()

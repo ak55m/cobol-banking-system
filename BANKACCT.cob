@@ -8,6 +8,8 @@
        FILE-CONTROL.
            SELECT CUSTOMER-FILE ASSIGN TO 'CUSTOMERS.DAT'
                ORGANIZATION IS LINE SEQUENTIAL.
+           SELECT TRANSACTION-FILE ASSIGN TO 'TRANSACTIONS.DAT'
+               ORGANIZATION IS LINE SEQUENTIAL.
 
        DATA DIVISION.
        FILE SECTION.
@@ -17,6 +19,14 @@
            05 NAME        PIC X(30).
            05 BALANCE     PIC 9(7)V99.
            05 ACCT-TYPE   PIC X(1).
+
+       FD TRANSACTION-FILE.
+       01 TRANSACTION-RECORD.
+           05 TRANS-ACCT-ID    PIC X(10).
+           05 TRANS-TYPE       PIC X(1).
+           05 TRANS-AMOUNT     PIC 9(7)V99.
+           05 TRANS-DATE       PIC X(10).
+           05 TRANS-TIME       PIC X(8).
 
        WORKING-STORAGE SECTION.
        01 CHOICE           PIC 9.
@@ -32,6 +42,18 @@
        01 WS-AMOUNT        PIC 9(7)V99.
        01 WS-FOUND         PIC X VALUE 'N'.
        01 WS-NEW-BALANCE   PIC 9(7)V99.
+       
+       01 WS-CURRENT-DATE.
+           05 WS-YEAR      PIC 9999.
+           05 WS-MONTH     PIC 99.
+           05 WS-DAY       PIC 99.
+       01 WS-CURRENT-TIME.
+           05 WS-HOUR      PIC 99.
+           05 WS-MINUTE    PIC 99.
+           05 WS-SECOND    PIC 99.
+       01 WS-DATE-STRING   PIC X(10).
+       01 WS-TIME-STRING   PIC X(8).
+       01 WS-STMT-COUNT    PIC 99 VALUE 0.
 
        PROCEDURE DIVISION.
        MAIN-PARA.
@@ -45,9 +67,11 @@
                DISPLAY "  2. View All Accounts"
                DISPLAY "  3. Deposit Money"
                DISPLAY "  4. Withdraw Money"
-               DISPLAY "  5. Exit System"
+               DISPLAY "  5. Mini Statement"
+               DISPLAY "  6. Apply Interest (Savings)"
+               DISPLAY "  7. Exit System"
                DISPLAY " "
-               DISPLAY "Enter your choice (1-5): " WITH NO ADVANCING
+               DISPLAY "Enter your choice (1-7): " WITH NO ADVANCING
                ACCEPT CHOICE
                EVALUATE CHOICE
                    WHEN 1
@@ -59,10 +83,14 @@
                    WHEN 4
                        PERFORM WITHDRAW-MONEY
                    WHEN 5
+                       PERFORM MINI-STATEMENT
+                   WHEN 6
+                       PERFORM APPLY-INTEREST
+                   WHEN 7
                        DISPLAY "👋 Thank you for using COBOL Banking System!"
                        MOVE 'Y' TO WS-DONE
                    WHEN OTHER
-                       DISPLAY "❌ Invalid option. Please enter 1-5."
+                       DISPLAY "❌ Invalid option. Please enter 1-7."
                END-EVALUATE
            END-PERFORM
            STOP RUN.
@@ -185,6 +213,7 @@
                            MOVE BALANCE TO WS-NEW-BALANCE
                            REWRITE CUSTOMER-RECORD
                            MOVE 'Y' TO WS-FOUND
+                           PERFORM LOG-TRANSACTION-DEPOSIT
                            MOVE "10" TO FILE-STATUS
                        END-IF
                    END-IF
@@ -209,6 +238,7 @@
                                MOVE BALANCE TO WS-NEW-BALANCE
                                REWRITE CUSTOMER-RECORD
                                MOVE 'Y' TO WS-FOUND
+                               PERFORM LOG-TRANSACTION-WITHDRAW
                            ELSE
                                DISPLAY " "
                                DISPLAY "❌ Insufficient funds!"
@@ -242,3 +272,117 @@
            END-IF
            
            CLOSE CUSTOMER-FILE.
+
+       MINI-STATEMENT.
+           DISPLAY " "
+           DISPLAY "📊 MINI STATEMENT"
+           DISPLAY "================"
+           
+           DISPLAY "Enter Account ID: " WITH NO ADVANCING
+           ACCEPT WS-SEARCH-ID
+           
+           DISPLAY " "
+           DISPLAY "Last 5 transactions for Account: " WS-SEARCH-ID
+           DISPLAY "Date       | Time     | Type | Amount     "
+           DISPLAY "-----------|----------|------|------------"
+           
+           MOVE 0 TO WS-STMT-COUNT
+           OPEN INPUT TRANSACTION-FILE
+           
+           IF FILE-STATUS NOT = "00"
+               DISPLAY "❌ No transaction history found."
+           ELSE
+               PERFORM UNTIL FILE-STATUS = "10" OR WS-STMT-COUNT >= 5
+                   READ TRANSACTION-FILE
+                   IF FILE-STATUS = "00"
+                       IF TRANS-ACCT-ID = WS-SEARCH-ID
+                           ADD 1 TO WS-STMT-COUNT
+                           IF TRANS-TYPE = 'D'
+                               DISPLAY TRANS-DATE " | " TRANS-TIME " | DEP  | $" TRANS-AMOUNT
+                           ELSE
+                               DISPLAY TRANS-DATE " | " TRANS-TIME " | WTH  | $" TRANS-AMOUNT
+                           END-IF
+                       END-IF
+                   END-IF
+               END-PERFORM
+               
+               IF WS-STMT-COUNT = 0
+                   DISPLAY "No transactions found for this account."
+               END-IF
+           END-IF
+           
+           CLOSE TRANSACTION-FILE.
+
+       APPLY-INTEREST.
+           DISPLAY " "
+           DISPLAY "💰 APPLY INTEREST TO SAVINGS ACCOUNTS"
+           DISPLAY "===================================="
+           DISPLAY "Applying 2% annual interest to all savings accounts..."
+           
+           MOVE 0 TO WS-STMT-COUNT
+           OPEN I-O CUSTOMER-FILE
+           
+           IF FILE-STATUS NOT = "00"
+               DISPLAY "❌ Error opening customer file: " FILE-STATUS
+           ELSE
+               PERFORM UNTIL FILE-STATUS = "10"
+                   READ CUSTOMER-FILE
+                   IF FILE-STATUS = "00"
+                       IF ACCT-TYPE = 'S'
+                           COMPUTE WS-AMOUNT = BALANCE * 0.02
+                           ADD WS-AMOUNT TO BALANCE
+                           REWRITE CUSTOMER-RECORD
+                           ADD 1 TO WS-STMT-COUNT
+                           MOVE ACCT-ID TO WS-SEARCH-ID
+                           PERFORM LOG-TRANSACTION-INTEREST
+                           DISPLAY "Interest applied to " ACCT-ID ": $" WS-AMOUNT
+                       END-IF
+                   END-IF
+               END-PERFORM
+               
+               DISPLAY " "
+               DISPLAY "✅ Interest applied to " WS-STMT-COUNT " savings accounts."
+           END-IF
+           
+           CLOSE CUSTOMER-FILE.
+
+       LOG-TRANSACTION-DEPOSIT.
+           PERFORM GET-CURRENT-DATETIME
+           OPEN EXTEND TRANSACTION-FILE
+           MOVE WS-SEARCH-ID TO TRANS-ACCT-ID
+           MOVE 'D' TO TRANS-TYPE
+           MOVE WS-AMOUNT TO TRANS-AMOUNT
+           MOVE WS-DATE-STRING TO TRANS-DATE
+           MOVE WS-TIME-STRING TO TRANS-TIME
+           WRITE TRANSACTION-RECORD
+           CLOSE TRANSACTION-FILE.
+
+       LOG-TRANSACTION-WITHDRAW.
+           PERFORM GET-CURRENT-DATETIME
+           OPEN EXTEND TRANSACTION-FILE
+           MOVE WS-SEARCH-ID TO TRANS-ACCT-ID
+           MOVE 'W' TO TRANS-TYPE
+           MOVE WS-AMOUNT TO TRANS-AMOUNT
+           MOVE WS-DATE-STRING TO TRANS-DATE
+           MOVE WS-TIME-STRING TO TRANS-TIME
+           WRITE TRANSACTION-RECORD
+           CLOSE TRANSACTION-FILE.
+
+       LOG-TRANSACTION-INTEREST.
+           PERFORM GET-CURRENT-DATETIME
+           OPEN EXTEND TRANSACTION-FILE
+           MOVE WS-SEARCH-ID TO TRANS-ACCT-ID
+           MOVE 'I' TO TRANS-TYPE
+           MOVE WS-AMOUNT TO TRANS-AMOUNT
+           MOVE WS-DATE-STRING TO TRANS-DATE
+           MOVE WS-TIME-STRING TO TRANS-TIME
+           WRITE TRANSACTION-RECORD
+           CLOSE TRANSACTION-FILE.
+
+       GET-CURRENT-DATETIME.
+           ACCEPT WS-CURRENT-DATE FROM DATE YYYYMMDD
+           ACCEPT WS-CURRENT-TIME FROM TIME
+           STRING WS-YEAR '/' WS-MONTH '/' WS-DAY DELIMITED BY SIZE
+               INTO WS-DATE-STRING
+           STRING WS-HOUR ':' WS-MINUTE ':' WS-SECOND DELIMITED BY SIZE
+               INTO WS-TIME-STRING.
