@@ -6,14 +6,19 @@ This is a complete banking system implemented in COBOL using a Python-based GnuC
 
 ## Recent Changes
 
-**July 27, 2025 - Added Deposit & Withdraw Features:**
+**July 27, 2025 - Enhanced Banking System with Complete Transaction Management:**
 - Enhanced COBOL program with deposit money functionality
 - Enhanced COBOL program with withdraw money functionality  
 - Added balance validation to prevent overdrafts
 - Added proper error handling for account not found scenarios
-- Updated menu system to include options 3 (Deposit) and 4 (Withdraw)
-- Updated Python simulator to handle financial transactions
-- Successfully tested all transaction scenarios including insufficient funds validation
+- Implemented transaction logging system (TRANSACTIONS.DAT file)
+- Added mini statement feature showing last 5 transactions per account
+- Added interest calculation for savings accounts (2% annual rate)
+- Added delete account functionality (marks accounts as inactive)
+- Enhanced account status tracking (Active/Inactive)
+- Added safeguards preventing transactions on inactive accounts
+- Updated menu system with options 3-7 for all banking operations
+- Updated Python simulator to handle all financial transactions with proper validation
 
 ## User Preferences
 

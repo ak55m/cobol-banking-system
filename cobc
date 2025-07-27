@@ -30,9 +30,10 @@ def main():
         print("  4. Withdraw Money")
         print("  5. Mini Statement")
         print("  6. Apply Interest (Savings)")
-        print("  7. Exit System")
+        print("  7. Delete Account")
+        print("  8. Exit System")
         print(" ")
-        choice = input("Enter your choice (1-7): ")
+        choice = input("Enter your choice (1-8): ")
         
         if choice == "1":
             create_account()
@@ -47,10 +48,12 @@ def main():
         elif choice == "6":
             apply_interest()
         elif choice == "7":
+            delete_account()
+        elif choice == "8":
             print("👋 Thank you for using COBOL Banking System!")
             break
         else:
-            print("❌ Invalid option. Please enter 1-7.")
+            print("❌ Invalid option. Please enter 1-8.")
 
 def create_account():
     print(" ")
@@ -62,9 +65,9 @@ def create_account():
     balance = input("Enter Initial Balance: $")
     acct_type = input("Enter Account Type (S=Savings, C=Checking): ")
     
-    # Write to customer file
+    # Write to customer file with active status
     with open("CUSTOMERS.DAT", "a") as f:
-        f.write(f"{{acct_id:<10}}{{name:<30}}{{balance:>9}}{{acct_type}}\\n")
+        f.write(f"{{acct_id:<10}}{{name:<30}}{{balance:>9}}{{acct_type}}A\\n")
     
     print(" ")
     print("✅ Account created successfully!")
@@ -86,8 +89,8 @@ def view_accounts():
             print("📭 No accounts found.")
             print("   Create your first account using option 1!")
         else:
-            print("Account ID | Customer Name              | Balance    | Type")
-            print("-----------|----------------------------|------------|-----")
+            print("Account ID | Customer Name              | Balance    | Type | Status")
+            print("-----------|----------------------------|------------|------|--------")
             
             for line in lines:
                 if line.strip():  # Skip empty lines
@@ -95,7 +98,14 @@ def view_accounts():
                     name = line[10:40].strip()
                     balance = line[40:49].strip()
                     acct_type = line[49:50].strip()
-                    print(f"{{acct_id:<10}} | {{name:<30}} | ${{balance:>8}} | {{acct_type}}")
+                    # Check if account has status flag (new format)
+                    if len(line.strip()) > 50:
+                        status = line[50:51].strip()
+                        status_display = "ACTIVE" if status == 'A' else "INACTIVE"
+                    else:
+                        status_display = "ACTIVE"  # Old format accounts are active
+                    
+                    print(f"{{acct_id:<10}} | {{name:<30}} | ${{balance:>8}} | {{acct_type}}    | {{status_display}}")
                     
     except FileNotFoundError:
         print("📭 No accounts found.")
@@ -132,10 +142,20 @@ def deposit_money():
                 name = line[10:40].strip()
                 balance = float(line[40:49].strip())
                 acct_type = line[49:50].strip()
+                # Check account status
+                if len(line.strip()) > 50:
+                    status = line[50:51].strip()
+                else:
+                    status = 'A'  # Active by default for old records
                 
                 if acct_id == search_id:
+                    if status == 'I':
+                        print(" ")
+                        print(f"❌ Cannot deposit to inactive account: {{search_id}}")
+                        return
+                    
                     new_balance = balance + amount
-                    updated_line = f"{{acct_id:<10}}{{name:<30}}{{new_balance:>9.0f}}{{acct_type}}\\n"
+                    updated_line = f"{{acct_id:<10}}{{name:<30}}{{new_balance:>9.0f}}{{acct_type}}{{status}}\\n"
                     updated_lines.append(updated_line)
                     found = True
                     
@@ -192,11 +212,21 @@ def withdraw_money():
                 name = line[10:40].strip()
                 balance = float(line[40:49].strip())
                 acct_type = line[49:50].strip()
+                # Check account status
+                if len(line.strip()) > 50:
+                    status = line[50:51].strip()
+                else:
+                    status = 'A'  # Active by default for old records
                 
                 if acct_id == search_id:
+                    if status == 'I':
+                        print(" ")
+                        print(f"❌ Cannot withdraw from inactive account: {{search_id}}")
+                        return
+                    
                     if balance >= amount:
                         new_balance = balance - amount
-                        updated_line = f"{{acct_id:<10}}{{name:<30}}{{new_balance:>9.0f}}{{acct_type}}\\n"
+                        updated_line = f"{{acct_id:<10}}{{name:<30}}{{new_balance:>9.0f}}{{acct_type}}{{status}}\\n"
                         updated_lines.append(updated_line)
                         found = True
                         
@@ -266,7 +296,7 @@ def mini_statement():
                     date = line[20:30].strip()
                     time = line[30:38].strip()
                     
-                    type_display = "DEP" if trans_type == "D" else "WTH" if trans_type == "W" else "INT"
+                    type_display = "DEP" if trans_type == "D" else "WTH" if trans_type == "W" else "INT" if trans_type == "I" else "DEL"
                     account_transactions.append(f"{{date}} | {{time}} | {{type_display}}  | ${{amount}}")
         
         if account_transactions:
@@ -298,11 +328,16 @@ def apply_interest():
                 name = line[10:40].strip()
                 balance = float(line[40:49].strip())
                 acct_type = line[49:50].strip()
+                # Check account status
+                if len(line.strip()) > 50:
+                    status = line[50:51].strip()
+                else:
+                    status = 'A'  # Active by default for old records
                 
-                if acct_type == 'S':  # Savings account
+                if acct_type == 'S' and status == 'A':  # Active savings account only
                     interest_amount = balance * 0.02
                     new_balance = balance + interest_amount
-                    updated_line = f"{{acct_id:<10}}{{name:<30}}{{new_balance:>9.0f}}{{acct_type}}\\n"
+                    updated_line = f"{{acct_id:<10}}{{name:<30}}{{new_balance:>9.0f}}{{acct_type}}{{status}}\\n"
                     updated_lines.append(updated_line)
                     
                     # Log interest transaction
@@ -327,6 +362,79 @@ def apply_interest():
             
     except FileNotFoundError:
         print("❌ No customer accounts found.")
+
+def delete_account():
+    print(" ")
+    print("🗑️ DELETE ACCOUNT (Mark as Inactive)")
+    print("=" * 34)
+    
+    search_id = input("Enter Account ID to delete: ")
+    
+    # Confirm deletion
+    confirm = input(f"Are you sure you want to delete account {{search_id}}? (y/N): ")
+    if confirm.lower() != 'y':
+        print("❌ Account deletion cancelled.")
+        return
+    
+    try:
+        with open("CUSTOMERS.DAT", "r") as f:
+            lines = f.readlines()
+        
+        found = False
+        updated_lines = []
+        
+        for line in lines:
+            if line.strip():
+                acct_id = line[0:10].strip()
+                name = line[10:40].strip()
+                balance = float(line[40:49].strip())
+                acct_type = line[49:50].strip()
+                # Check if account already has status flag (new format)
+                if len(line.strip()) > 50:
+                    status = line[50:51].strip()
+                else:
+                    status = 'A'  # Active by default for old records
+                
+                if acct_id == search_id:
+                    if status == 'I':
+                        print(" ")
+                        print(f"❌ Account {{search_id}} is already inactive.")
+                        return
+                    
+                    # Mark as inactive
+                    updated_line = f"{{acct_id:<10}}{{name:<30}}{{balance:>9.0f}}{{acct_type}}I\\n"
+                    updated_lines.append(updated_line)
+                    found = True
+                    
+                    print(" ")
+                    print("✅ Account marked as inactive!")
+                    print(f"   Account ID: {{search_id}}")  
+                    print(f"   Final Balance: ${{balance:.2f}}")
+                    print("   Status: INACTIVE")
+                    
+                    # Log deletion transaction
+                    log_transaction(search_id, "X", 0)  # X for deletion
+                else:
+                    # Keep existing format for other accounts
+                    if len(line.strip()) > 50:
+                        updated_lines.append(line)
+                    else:
+                        # Add active status to old format records
+                        updated_line = f"{{acct_id:<10}}{{name:<30}}{{balance:>9.0f}}{{acct_type}}A\\n"
+                        updated_lines.append(updated_line)
+            else:
+                updated_lines.append(line)
+        
+        if found:
+            with open("CUSTOMERS.DAT", "w") as f:
+                f.writelines(updated_lines)
+        else:
+            print(" ")
+            print(f"❌ Account not found: {{search_id}}")
+            
+    except FileNotFoundError:
+        print(" ")
+        print(f"❌ Account not found: {{search_id}}")
 
 if __name__ == "__main__":
     main()
