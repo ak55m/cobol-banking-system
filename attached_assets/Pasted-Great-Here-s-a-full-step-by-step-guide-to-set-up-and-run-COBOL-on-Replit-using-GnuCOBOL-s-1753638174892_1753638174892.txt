@@ -1,0 +1,139 @@
+Great! Here's a full step-by-step guide to **set up and run COBOL on Replit** using **GnuCOBOL** — so you can build your banking system project completely online.
+
+---
+
+## ✅ Step-by-Step: Set Up COBOL on Replit
+
+### 🔹 **Step 1: Create a Replit Project**
+
+1. Go to [https://replit.com](https://replit.com)
+2. Click **"Create Repl"**
+3. Choose **"Bash"** as the language (since there's no official COBOL template)
+4. Name your project (e.g., `banking-system-cobol`)
+5. Click **"Create Repl"**
+
+---
+
+### 🔹 **Step 2: Install GnuCOBOL**
+
+In the Replit shell (the console at the bottom), enter:
+
+```bash
+sudo apt update
+sudo apt install open-cobol -y
+```
+
+> This installs the GnuCOBOL compiler `cobc`.
+
+**⚠️ NOTE:** It might take **1–2 minutes** to install. You only have to do this once per Repl.
+
+---
+
+### 🔹 **Step 3: Create Your COBOL File**
+
+In the **left sidebar**, click `Add file`, name it:
+`BANKACCT.cob`
+
+Paste the following **starter COBOL code**:
+
+```cobol
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. BANKACCT.
+       AUTHOR. YOU.
+
+       ENVIRONMENT DIVISION.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT CUSTOMER-FILE ASSIGN TO 'CUSTOMERS.DAT'
+               ORGANIZATION IS LINE SEQUENTIAL.
+
+       DATA DIVISION.
+       FILE SECTION.
+       FD CUSTOMER-FILE.
+       01 CUSTOMER-RECORD.
+           05 ACCT-ID     PIC X(10).
+           05 NAME        PIC X(30).
+           05 BALANCE     PIC 9(7)V99.
+           05 ACCT-TYPE   PIC X(1).
+
+       WORKING-STORAGE SECTION.
+       01 CHOICE           PIC 9.
+       01 WS-DONE          PIC X VALUE 'N'.
+
+       01 WS-ACCT-ID       PIC X(10).
+       01 WS-NAME          PIC X(30).
+       01 WS-BALANCE       PIC 9(7)V99.
+       01 WS-TYPE          PIC X(1).
+
+       PROCEDURE DIVISION.
+       MAIN-PARA.
+           PERFORM UNTIL WS-DONE = 'Y'
+               DISPLAY "1. Create Account"
+               DISPLAY "2. Exit"
+               DISPLAY "Enter your choice: "
+               ACCEPT CHOICE
+               EVALUATE CHOICE
+                   WHEN 1
+                       PERFORM CREATE-ACCOUNT
+                   WHEN 2
+                       MOVE 'Y' TO WS-DONE
+                   WHEN OTHER
+                       DISPLAY "Invalid option"
+               END-EVALUATE
+           END-PERFORM
+           STOP RUN.
+
+       CREATE-ACCOUNT.
+           DISPLAY "Enter Account ID: " ACCEPT WS-ACCT-ID
+           DISPLAY "Enter Name: " ACCEPT WS-NAME
+           DISPLAY "Enter Initial Balance: " ACCEPT WS-BALANCE
+           DISPLAY "Enter Account Type (S/C): " ACCEPT WS-TYPE
+
+           OPEN EXTEND CUSTOMER-FILE
+           MOVE WS-ACCT-ID TO ACCT-ID
+           MOVE WS-NAME TO NAME
+           MOVE WS-BALANCE TO BALANCE
+           MOVE WS-TYPE TO ACCT-TYPE
+           WRITE CUSTOMER-RECORD
+           CLOSE CUSTOMER-FILE
+
+           DISPLAY "✅ Account created successfully!".
+```
+
+---
+
+### 🔹 **Step 4: Create a Data File**
+
+Click `Add file` → name it `CUSTOMERS.DAT` (keep it empty — this is where data will go)
+
+---
+
+### 🔹 **Step 5: Compile and Run**
+
+In the **console**, run:
+
+```bash
+cobc -x BANKACCT.cob
+./BANKACCT
+```
+
+If all goes well, you'll see the menu:
+
+```
+1. Create Account
+2. Exit
+Enter your choice:
+```
+
+---
+
+## ✅ Next Steps
+
+Once this is working, we can:
+
+* Add Deposit / Withdraw features
+* Log transactions to `TRANSACTIONS.DAT`
+* Add mini statement
+* Apply interest logic
+
+Would you like to proceed with **adding the deposit/withdraw feature next**?
