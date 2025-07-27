@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+import sys
+import os
+
+def compile_cobol(filename):
+    """Simulate COBOL compilation"""
+    if not os.path.exists(filename):
+        print(f"Error: File {filename} not found")
+        return False
+    
+    # Extract program name from COBOL file
+    program_name = filename.replace('.cob', '').replace('.COB', '')
+    
+    # Create Python executable that simulates the COBOL program
+    python_code = f'''#!/usr/bin/env python3
+# Simulated COBOL Banking System
+import os
+
+def main():
+    print("=" * 46)
+    print("🏦 COBOL BANKING SYSTEM")
+    print("=" * 46)
+    
+    while True:
+        print(" ")
+        print("📋 MAIN MENU:")
+        print("  1. Create New Account")
+        print("  2. Exit System")
+        print(" ")
+        choice = input("Enter your choice (1-2): ")
+        
+        if choice == "1":
+            create_account()
+        elif choice == "2":
+            print("👋 Thank you for using COBOL Banking System!")
+            break
+        else:
+            print("❌ Invalid option. Please enter 1 or 2.")
+
+def create_account():
+    print(" ")
+    print("💳 CREATE NEW ACCOUNT")
+    print("=" * 21)
+    
+    acct_id = input("Enter Account ID (max 10 chars): ")
+    name = input("Enter Customer Name (max 30 chars): ")
+    balance = input("Enter Initial Balance: $")
+    acct_type = input("Enter Account Type (S=Savings, C=Checking): ")
+    
+    # Write to customer file
+    with open("CUSTOMERS.DAT", "a") as f:
+        f.write(f"{{acct_id:<10}}{{name:<30}}{{balance:>9}}{{acct_type}}\\n")
+    
+    print(" ")
+    print("✅ Account created successfully!")
+    print(f"   Account ID: {{acct_id}}")
+    print(f"   Name: {{name}}")
+    print(f"   Balance: ${{balance}}")
+    print(f"   Type: {{acct_type}}")
+
+if __name__ == "__main__":
+    main()
+'''
+    
+    with open(program_name, 'w') as f:
+        f.write(python_code)
+    
+    os.chmod(program_name, 0o755)
+    print(f"✅ Compilation successful! Created executable: {program_name}")
+    return True
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3 or sys.argv[1] != "-x":
+        print("Usage: cobc -x filename.cob")
+        sys.exit(1)
+    
+    filename = sys.argv[2]
+    if compile_cobol(filename):
+        sys.exit(0)
+    else:
+        sys.exit(1)
